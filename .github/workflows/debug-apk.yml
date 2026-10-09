@@ -107,6 +107,12 @@ jobs:
           keystore=android/keystore/release.jks
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Using the release key from repository secrets."
+            # PKCS12 keystores use one password for the store and the key.
+            KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}
+            if [ -z "$KEY_ALIAS" ] || [ -z "$STORE_PASSWORD" ]; then
+              echo "::error::DEXTOP_KEY_ALIAS and DEXTOP_STORE_PASSWORD secrets are required with DEXTOP_KEYSTORE_BASE64."
+              exit 1
+            fi
             printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
           else
             # No key stored in secrets: sign with a key made for this run only.
@@ -122,6 +128,26 @@ jobs:
           fi
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
+          # Unlock the private key the way the Gradle signing step will, so a wrong
+          # alias or password fails here instead of after the full build.
+          cat > "$RUNNER_TEMP/CheckKey.java" <<'JAVA'
+          import java.io.File;
+          import java.security.KeyStore;
+
+          public class CheckKey {
+              public static void main(String[] args) throws Exception {
+                  KeyStore store = KeyStore.getInstance(new File(args[0]), System.getenv("STORE_PASSWORD").toCharArray());
+                  if (store.getKey(System.getenv("KEY_ALIAS"), System.getenv("KEY_PASSWORD").toCharArray()) == null) {
+                      throw new IllegalStateException("alias " + System.getenv("KEY_ALIAS") + " not found in the keystore");
+                  }
+              }
+          }
+          JAVA
+          export KEY_ALIAS STORE_PASSWORD KEY_PASSWORD
+          if ! java "$RUNNER_TEMP/CheckKey.java" "$keystore"; then
+            echo "::error::The release key could not be unlocked. Check the DEXTOP_KEY_ALIAS, DEXTOP_STORE_PASSWORD and DEXTOP_KEY_PASSWORD secrets."
+            exit 1
+          fi
           {
             echo "DEXTOP_KEYSTORE_FILE=$keystore"
             echo "DEXTOP_KEY_ALIAS=$KEY_ALIAS"
