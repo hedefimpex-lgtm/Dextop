@@ -7,6 +7,27 @@ import android.os.SystemClock
 
 internal enum class TileZone { NONE, MAXIMIZE, LEFT, RIGHT, TOP, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
 
+/** Where a window dropped against a work-area edge snaps to, Windows style. */
+internal object EdgeSnap {
+    /**
+     * Touching the left or right edge (within [edge] px) snaps to that half,
+     * touching the top edge maximizes, anything else stays floating.  A
+     * window as wide as the work area touches both sides and never snaps
+     * sideways.
+     */
+    fun zone(left: Int, top: Int, right: Int, areaLeft: Int, areaTop: Int, areaRight: Int, edge: Int): TileZone? {
+        if (right - left >= areaRight - areaLeft) return null
+        val nearLeft = left <= areaLeft + edge
+        val nearRight = right >= areaRight - edge
+        return when {
+            nearLeft && !nearRight -> TileZone.LEFT
+            nearRight && !nearLeft -> TileZone.RIGHT
+            top <= areaTop -> TileZone.MAXIMIZE
+            else -> null
+        }
+    }
+}
+
 /** Shell-side state of one platform freeform window. */
 internal class ManagedWindow(var task: TaskSnapshot) {
     val taskId: Int get() = task.taskId

@@ -2355,6 +2355,20 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mover o ponteiro para o canto superior esquerdo abre a Visão geral';
 
   @override
+  String get plasmaWindowButtons => 'Botões da janela';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      'Mostrar os botões minimizar, maximizar e fechar no canto superior direito da janela ativa';
+
+  @override
+  String get plasmaEdgeSnapping => 'Ajustar janelas às bordas da tela';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      'Arrastar uma janela para a borda esquerda ou direita a redimensiona para metade da tela; arrastá-la para o topo a maximiza';
+
+  @override
   String get plasmaShortcutsTitle => 'Atalhos de teclado';
 
   @override
@@ -4979,6 +4993,20 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
   @override
   String get plasmaHotCornerDescription =>
       'Mover o ponteiro para o canto superior esquerdo abre a Visão geral';
+
+  @override
+  String get plasmaWindowButtons => 'Botões da janela';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      'Mostrar os botões minimizar, maximizar e fechar no canto superior direito da janela ativa';
+
+  @override
+  String get plasmaEdgeSnapping => 'Ajustar janelas às bordas da tela';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      'Arrastar uma janela para a borda esquerda ou direita a redimensiona para metade da tela; arrastá-la para o topo a maximiza';
 
   @override
   String get plasmaShortcutsTitle => 'Atalhos de teclado';

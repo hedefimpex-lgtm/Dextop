@@ -2316,6 +2316,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Moving the pointer into the top-left corner opens Overview';
 
   @override
+  String get plasmaWindowButtons => 'Window buttons';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      'Show minimize, maximize and close buttons in the top-right corner of the active window';
+
+  @override
+  String get plasmaEdgeSnapping => 'Snap windows to screen edges';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      'Dragging a window to the left or right edge resizes it to half the screen; dragging it to the top maximizes it';
+
+  @override
   String get plasmaShortcutsTitle => 'Keyboard shortcuts';
 
   @override

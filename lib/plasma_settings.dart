@@ -37,6 +37,8 @@ class _PlasmaSettingsPageState extends State<PlasmaSettingsPage> {
   var desktops = 4;
   var animationSpeed = 1.0;
   var hotCorner = true;
+  var windowButtons = true;
+  var edgeSnapping = true;
 
   @override
   void initState() {
@@ -58,6 +60,8 @@ class _PlasmaSettingsPageState extends State<PlasmaSettingsPage> {
       animationSpeed = (store.getDouble('plasma_animation_speed') ?? 1.0)
           .clamp(0.0, 2.0);
       hotCorner = store.getBool('plasma_hot_corner') ?? true;
+      windowButtons = store.getBool('plasma_window_buttons') ?? true;
+      edgeSnapping = store.getBool('plasma_edge_snapping') ?? true;
     });
   }
 
@@ -257,6 +261,28 @@ class _PlasmaSettingsPageState extends State<PlasmaSettingsPage> {
                     onChanged: (value) {
                       setState(() => hotCorner = value);
                       _save((p) => p.setBool('plasma_hot_corner', value));
+                    },
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.web_asset_rounded),
+                    title: Text(l.plasmaWindowButtons),
+                    subtitle: Text(l.plasmaWindowButtonsDescription),
+                    value: windowButtons,
+                    onChanged: (value) {
+                      setState(() => windowButtons = value);
+                      _save((p) => p.setBool('plasma_window_buttons', value));
+                    },
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.vertical_split_rounded),
+                    title: Text(l.plasmaEdgeSnapping),
+                    subtitle: Text(l.plasmaEdgeSnappingDescription),
+                    value: edgeSnapping,
+                    onChanged: (value) {
+                      setState(() => edgeSnapping = value);
+                      _save((p) => p.setBool('plasma_edge_snapping', value));
                     },
                   ),
                 ]),
