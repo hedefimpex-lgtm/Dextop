@@ -66,3 +66,85 @@ jobs:
             build/cardex/outputs/apk/debug/cardex-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Build signed release APK
+    # Manual runs only; pushes and pull requests keep building just the debug APK.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.6
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DEXTOP_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.DEXTOP_KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.DEXTOP_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.DEXTOP_KEY_PASSWORD }}
+        run: |
+          mkdir -p android/keystore
+          keystore=android/keystore/release.jks
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using the release key from repository secrets."
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          else
+            # No key stored in secrets: sign with a key made for this run only.
+            # Installing a later build signed with a different key needs an uninstall first.
+            echo "::warning::DEXTOP_KEYSTORE_BASE64 is not set; signing with a one-off key."
+            KEY_ALIAS=dextop
+            STORE_PASSWORD=$(openssl rand -hex 24)
+            KEY_PASSWORD=$STORE_PASSWORD
+            keytool -genkeypair -noprompt -keystore "$keystore" -storetype PKCS12 \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
+              -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -dname "CN=Dextop test build"
+          fi
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          {
+            echo "DEXTOP_KEYSTORE_FILE=$keystore"
+            echo "DEXTOP_KEY_ALIAS=$KEY_ALIAS"
+            echo "DEXTOP_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "DEXTOP_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+          keytool -list -v -keystore "$keystore" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E "SHA256:|Owner:"
+
+      - name: Build release APK
+        run: |
+          flutter build apk --flavor github --release --target-platform android-arm64 \
+            --dart-define=DISTRIBUTION_CHANNEL=github
+          version=$(awk '/^version:/ {print $2; exit}' pubspec.yaml)
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-github-release.apk "dist/Dextop-v${version%%+*}-${GITHUB_SHA::7}.apk"
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f android/keystore/release.jks
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dextop-release-signed-${{ github.sha }}
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 14
