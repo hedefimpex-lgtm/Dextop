@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: debug-apk-${{ github.ref }}
+  # Manual runs build the signed release APK; keep pushes and pull requests from cancelling them.
+  group: debug-apk-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
