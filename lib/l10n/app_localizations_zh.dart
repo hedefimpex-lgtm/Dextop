@@ -2195,6 +2195,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get plasmaHotCornerDescription => '将指针移到左上角即可打开概览';
 
   @override
+  String get plasmaWindowButtons => '窗口按钮';
+
+  @override
+  String get plasmaWindowButtonsDescription => '在活动窗口右上角显示最小化、最大化和关闭按钮';
+
+  @override
+  String get plasmaEdgeSnapping => '贴靠屏幕边缘';
+
+  @override
+  String get plasmaEdgeSnappingDescription => '将窗口拖到左侧或右侧边缘会调整为半屏，拖到顶部会最大化';
+
+  @override
   String get plasmaShortcutsTitle => '键盘快捷键';
 
   @override

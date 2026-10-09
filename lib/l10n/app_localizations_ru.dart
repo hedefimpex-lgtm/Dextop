@@ -2342,6 +2342,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Перемещение указателя в левый верхний угол открывает обзор';
 
   @override
+  String get plasmaWindowButtons => 'Кнопки окна';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      'Показывать кнопки «Свернуть», «Развернуть» и «Закрыть» в правом верхнем углу активного окна';
+
+  @override
+  String get plasmaEdgeSnapping => 'Прилипание к краям экрана';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      'Окно, перетащенное к левому или правому краю, занимает половину экрана, а к верхнему — разворачивается';
+
+  @override
   String get plasmaShortcutsTitle => 'Сочетания клавиш';
 
   @override

@@ -4367,6 +4367,30 @@ abstract class AppLocalizations {
   /// **'ポインターを左上の角へ動かすとOverviewを開きます'**
   String get plasmaHotCornerDescription;
 
+  /// No description provided for @plasmaWindowButtons.
+  ///
+  /// In ja, this message translates to:
+  /// **'ウィンドウボタン'**
+  String get plasmaWindowButtons;
+
+  /// No description provided for @plasmaWindowButtonsDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'アクティブなウィンドウの右上に最小化・最大化・閉じるボタンを表示します'**
+  String get plasmaWindowButtonsDescription;
+
+  /// No description provided for @plasmaEdgeSnapping.
+  ///
+  /// In ja, this message translates to:
+  /// **'画面端へのスナップ'**
+  String get plasmaEdgeSnapping;
+
+  /// No description provided for @plasmaEdgeSnappingDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'ウィンドウを左右の端へドラッグすると画面の半分に、上端へドラッグすると最大化します'**
+  String get plasmaEdgeSnappingDescription;
+
   /// No description provided for @plasmaShortcutsTitle.
   ///
   /// In ja, this message translates to:

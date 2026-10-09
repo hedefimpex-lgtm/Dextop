@@ -2235,6 +2235,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get plasmaHotCornerDescription => '포인터를 왼쪽 위 모서리로 옮기면 Overview를 엽니다';
 
   @override
+  String get plasmaWindowButtons => '창 버튼';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      '활성 창의 오른쪽 위에 최소화, 최대화, 닫기 버튼을 표시합니다';
+
+  @override
+  String get plasmaEdgeSnapping => '화면 가장자리에 맞추기';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      '창을 왼쪽 또는 오른쪽 가장자리로 끌면 화면 절반 크기로, 위쪽으로 끌면 최대화됩니다';
+
+  @override
   String get plasmaShortcutsTitle => '키보드 단축키';
 
   @override

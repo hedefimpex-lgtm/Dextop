@@ -2222,6 +2222,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get plasmaHotCornerDescription => 'ポインターを左上の角へ動かすとOverviewを開きます';
 
   @override
+  String get plasmaWindowButtons => 'ウィンドウボタン';
+
+  @override
+  String get plasmaWindowButtonsDescription =>
+      'アクティブなウィンドウの右上に最小化・最大化・閉じるボタンを表示します';
+
+  @override
+  String get plasmaEdgeSnapping => '画面端へのスナップ';
+
+  @override
+  String get plasmaEdgeSnappingDescription =>
+      'ウィンドウを左右の端へドラッグすると画面の半分に、上端へドラッグすると最大化します';
+
+  @override
   String get plasmaShortcutsTitle => 'キーボードショートカット';
 
   @override

@@ -103,6 +103,10 @@ internal class PlasmaShell(
     private val lastBoundsPush = HashMap<Int, Long>()
     private val pendingLaunches = HashMap<String, Pair<Rect?, Long>>()
     private val parkedOffscreen = HashSet<Int>()
+    /** Bounds changes made through the platform caption that have not settled yet. */
+    private val externalChanges = HashMap<Int, ExternalChange>()
+    private var windowControls: WindowControlsView? = null
+    private var windowControlsTaskId = -1
     private var trayState = TrayState(.5f, false, 1f, false, true)
 
     private lateinit var panel: PlasmaPanelView
@@ -169,6 +173,7 @@ internal class PlasmaShell(
         leaveScreen?.let { layer.hide(it) }
         leaveScreen = null
         layer.clear()
+        windowControls = null
         val snapshot = windows.values.toList()
         val parked = HashSet(parkedOffscreen)
         if (restoreWindows) {
@@ -213,6 +218,9 @@ internal class PlasmaShell(
         settings = PlasmaSettings.load(service)
         palette = PlasmaTheme.resolve(service, settings)
         desktopActivity?.applySettings()
+        // Rebuilt with the new palette on the next update.
+        windowControls?.let(layer::hide)
+        windowControls = null
         if (settings.virtualDesktops < previousDesktops) {
             val last = settings.virtualDesktops - 1
             windows.values.filter { it.desktop > last }.forEach { it.desktop = last }
@@ -367,6 +375,7 @@ internal class PlasmaShell(
             windows[nextActive]?.lastActivated = now
         }
         updatePanelFloat()
+        updateWindowControls()
         panel.invalidate()
     }
 
@@ -379,9 +388,20 @@ internal class PlasmaShell(
                 window.frame.set(0, 0, width, height)
                 window.maximized = true
             } else if (task.bounds != window.frame) {
+                val moved = task.bounds.width() == window.frame.width() && task.bounds.height() == window.frame.height()
+                val snapped = window.maximized || window.tile != TileZone.NONE
+                val previous = externalChanges[window.taskId]
+                externalChanges[window.taskId] = ExternalChange(
+                    moved = moved && (previous?.moved ?: true),
+                    unsnap = previous?.unsnap ?: window.restoreFrame?.takeIf { snapped && moved }?.let(::Rect),
+                    from = previous?.from ?: if (window.maximized) TileZone.MAXIMIZE else window.tile,
+                )
                 window.frame.set(task.bounds)
                 window.maximized = task.bounds == workArea()
                 window.tile = TileZone.NONE
+            } else {
+                // Same bounds on two polls in a row: the drag or resize is over.
+                externalChanges.remove(window.taskId)?.let { settleExternalChange(window, it) }
             }
         }
         val hiddenRecently = now - (hiddenAt[window.taskId] ?: 0L) < HIDE_GRACE_MS
@@ -435,7 +455,44 @@ internal class PlasmaShell(
         hiddenAt.remove(window.taskId)
         lastBoundsPush.remove(window.taskId)
         parkedOffscreen.remove(window.taskId)
+        externalChanges.remove(window.taskId)
         if (activeTaskId == window.taskId) activeTaskId = -1
+    }
+
+    /**
+     * Windows-style snapping for windows moved with the platform caption:
+     * touching the left or right edge tiles the window to that half of the
+     * screen, touching the top edge maximizes it, and dragging a snapped
+     * window away gives it back the size it had before it was snapped.
+     */
+    private fun settleExternalChange(window: ManagedWindow, change: ExternalChange) {
+        if (!change.moved || !isShown(window) || window.taskId in parkedOffscreen) return
+        val zone = if (settings.edgeSnapping) snapZone(window.frame) else null
+        // Still against the edge it was snapped to, or the platform nudged
+        // the snapped window: re-snapping would fight the platform forever.
+        if (zone != null && zone == change.from) return
+        val unsnap = change.unsnap
+        when {
+            zone != null -> {
+                tile(window, zone)
+                // Keep the floating size from before the first snap.
+                unsnap?.let { window.restoreFrame = Rect(it) }
+            }
+            unsnap != null -> {
+                val area = workArea()
+                val w = unsnap.width().coerceAtMost(area.width())
+                val h = unsnap.height().coerceAtMost(area.height())
+                val left = (window.frame.centerX() - w / 2).coerceIn(area.left, area.right - w)
+                val top = window.frame.top.coerceIn(area.top, area.bottom - h)
+                window.restoreFrame = null
+                applyFrame(window, Rect(left, top, left + w, top + h))
+            }
+        }
+    }
+
+    private fun snapZone(frame: Rect): TileZone? {
+        val area = workArea()
+        return EdgeSnap.zone(frame.left, frame.top, frame.right, area.left, area.top, area.right, layer.dp(4))
     }
     // endregion
 
@@ -477,6 +534,7 @@ internal class PlasmaShell(
     private fun applyFrame(window: ManagedWindow, target: Rect) {
         window.frame.set(target)
         lastBoundsPush[window.taskId] = SystemClock.uptimeMillis()
+        externalChanges.remove(window.taskId)
         val task = window.task
         val bounds = Rect(target)
         runCatching {
@@ -488,6 +546,44 @@ internal class PlasmaShell(
             }
         }
         updatePanelFloat()
+        updateWindowControls()
+    }
+
+    /**
+     * Places the Windows-style caption buttons on the active window.  They
+     * hide while the window is being dragged or resized (the platform moves
+     * it faster than the shell polls) and while any shell surface that would
+     * stack below them is open.
+     */
+    private fun updateWindowControls() {
+        if (!running) return
+        val window = windows[activeTaskId]?.takeIf {
+            settings.windowButtons && isShown(it) && !peeking &&
+                it.taskId !in parkedOffscreen && it.taskId !in externalChanges &&
+                popup == null && overview == null && switcher == null && !switcherRequested && leaveScreen == null
+        }
+        if (window == null) {
+            windowControls?.let(layer::hide)
+            return
+        }
+        val controls = windowControls ?: WindowControlsView(
+            displayContext,
+            palette,
+            onMinimize = { windows[windowControlsTaskId]?.let(::minimize) },
+            onMaximize = { windows[windowControlsTaskId]?.let(::toggleMaximize) },
+            onClose = { windows[windowControlsTaskId]?.let(::close) },
+            onMenu = { x, y -> windows[windowControlsTaskId]?.let { showWindowMenu(it, x, y) } },
+        ).also { windowControls = it }
+        val bounds = controls.boundsFor(window.frame, width, height)
+        if (bounds == null) {
+            layer.hide(controls)
+            return
+        }
+        windowControlsTaskId = window.taskId
+        controls.maximized = window.maximized || window.task.windowingMode == TaskBridge.WINDOWING_MODE_FULLSCREEN
+        if (!layer.isAttached(controls) || layer.bounds(controls) != bounds) {
+            layer.show(controls, bounds, title = "Dextop Plasma window buttons")
+        }
     }
     // endregion
 
@@ -506,6 +602,7 @@ internal class PlasmaShell(
         window.lastActivated = SystemClock.uptimeMillis()
         zOrder = listOf(window) + zOrder.filter { it !== window }
         showTask(window)
+        updateWindowControls()
         panel.invalidate()
     }
 
@@ -550,6 +647,7 @@ internal class PlasmaShell(
             }
         }
         updatePanelFloat()
+        updateWindowControls()
         panel.invalidate()
     }
 
@@ -583,6 +681,7 @@ internal class PlasmaShell(
     }
 
     fun close(window: ManagedWindow) {
+        if (window.taskId == windowControlsTaskId) windowControls?.let(layer::hide)
         val task = window.task
         runCatching { wmExecutor.execute { bridge.close(task) } }
         schedulePoll(250L)
@@ -1493,3 +1592,6 @@ internal class PlasmaShell(
         }
     }
 }
+
+/** A move or resize the user made through the platform caption. */
+private class ExternalChange(val moved: Boolean, val unsnap: Rect?, val from: TileZone)

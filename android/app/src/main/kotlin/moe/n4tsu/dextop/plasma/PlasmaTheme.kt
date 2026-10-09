@@ -133,6 +133,10 @@ internal data class PlasmaSettings(
     val virtualDesktops: Int = 4,
     val animationSpeed: Float = 1f,
     val hotCorner: Boolean = true,
+    /** Windows-style minimize/maximize/close buttons on the active window. */
+    val windowButtons: Boolean = true,
+    /** Dragging a window to the left/right edge tiles it to half the screen, to the top maximizes it. */
+    val edgeSnapping: Boolean = true,
     val wallpaper: String = "plasma",
 ) {
     /** Returns a duration scaled by the animation slider; 0 disables animation. */
@@ -155,6 +159,8 @@ internal data class PlasmaSettings(
                 virtualDesktops = long("flutter.plasma_virtual_desktops", 4L).toInt().coerceIn(1, 6),
                 animationSpeed = double("flutter.plasma_animation_speed", 1.0).toFloat().coerceIn(0f, 3f),
                 hotCorner = prefs.getBoolean("flutter.plasma_hot_corner", true),
+                windowButtons = prefs.getBoolean("flutter.plasma_window_buttons", true),
+                edgeSnapping = prefs.getBoolean("flutter.plasma_edge_snapping", true),
                 wallpaper = prefs.getString("flutter.plasma_wallpaper", "plasma") ?: "plasma",
             )
         }
